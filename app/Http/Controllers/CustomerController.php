@@ -27,16 +27,16 @@ class CustomerController extends Controller
 
             if (!$registeredUser) {
                 $user = User::create([
-                    'nama' => $socialUser->getName(),
-                    'email' => $socialUser->getEmail(),
-                    'role' => '2',
-                    'status' => 1,
+                    'nama'     => $socialUser->getName(),
+                    'email'    => $socialUser->getEmail(),
+                    'role'     => '2',
+                    'status'   => 1,
                     'password' => Hash::make('default_password'),
                 ]);
 
                 Customer::create([
-                    'user_id' => $user->id,
-                    'google_id' => $socialUser->getId(),
+                    'user_id'      => $user->id,
+                    'google_id'    => $socialUser->getId(),
                     'google_token' => $socialUser->token,
                 ]);
 
@@ -45,13 +45,13 @@ class CustomerController extends Controller
                 $customer = Customer::where('user_id', $registeredUser->id)->first();
                 if ($customer) {
                     $customer->update([
-                        'google_id' => $socialUser->getId(),
+                        'google_id'    => $socialUser->getId(),
                         'google_token' => $socialUser->token,
                     ]);
                 } else {
                     Customer::create([
-                        'user_id' => $registeredUser->id,
-                        'google_id' => $socialUser->getId(),
+                        'user_id'      => $registeredUser->id,
+                        'google_id'    => $socialUser->getId(),
                         'google_token' => $socialUser->token,
                     ]);
                 }
@@ -64,29 +64,34 @@ class CustomerController extends Controller
         }
     }
 
-    // ================= AKUN CUSTOMER =================
+    // ================= AKUN CUSTOMER (FRONTEND) =================
 
-   public function akun($id)
-{
-    $customer = Customer::where('user_id', $id)->firstOrFail();
+    public function akun($id)
+    {
+        $customer = Customer::where('user_id', $id)->firstOrFail();
 
-    return view('v_customer.edit', [  // ← pastikan ini, bukan 'frontend.akun'
-        'judul' => 'Akun Customer',
-        'edit'  => $customer,
-    ]);
-}
+        return view('v_customer.edit', [
+            'judul' => 'Akun Customer',
+            'edit'  => $customer,
+        ]);
+    }
 
     public function updateAkun(Request $request)
     {
         $customer = Customer::where('user_id', Auth::id())->first();
 
         if ($customer) {
-            $customer->update([
-                'nama' => $request->nama,
+            // Update data di tabel user
+            $customer->user->update([
+                'nama'  => $request->nama,
                 'email' => $request->email,
-                'hp' => $request->hp,
+                'hp'    => $request->hp,
+            ]);
+
+            // Update data di tabel customer
+            $customer->update([
                 'alamat' => $request->alamat,
-                'pos' => $request->pos,
+                'pos'    => $request->pos,
             ]);
         }
 
@@ -105,12 +110,14 @@ class CustomerController extends Controller
         return redirect('/');
     }
 
+    // ================= BACKEND =================
+
     public function index()
     {
         $customer = Customer::orderBy('id', 'desc')->get();
         return view('backend.v_customer.index', [
             'judul' => 'Customer',
-            'sub' => 'Halaman Customer',
+            'sub'   => 'Halaman Customer',
             'index' => $customer,
         ]);
     }
@@ -120,9 +127,31 @@ class CustomerController extends Controller
         $customer = Customer::findOrFail($id);
         return view('backend.v_customer.edit', [
             'judul' => 'Ubah Customer',
-            'sub' => 'Halaman Ubah Customer',
-            'edit' => $customer,
+            'sub'   => 'Halaman Ubah Customer',
+            'edit'  => $customer,
         ]);
     }
 
+    public function update(Request $request, string $id)
+    {
+        $customer = Customer::findOrFail($id);
+
+        // Update data di tabel user
+        $customer->user->update([
+            'nama'  => $request->nama,
+            'email' => $request->email,
+            'hp'    => $request->hp,
+        ]);
+
+        // Update data di tabel customer
+        $customer->update([
+            'alamat' => $request->alamat,
+            'pos'    => $request->pos,
+        ]);
+
+        return redirect()->route('backend.customer.index')
+                         ->with('success', 'Data customer berhasil diperbarui');
+    }
+
+    
 }
